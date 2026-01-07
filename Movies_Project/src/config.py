@@ -4,15 +4,15 @@
 # Catalog & Schemas
 # ----------------------
 CATALOG = "workspace"        # Nom du catalog Unity
-RAW_SCHEMA = "demo"          # Schema temporaire pour RAW
-BRONZE_SCHEMA = "bronze"     # Schema pour Bronze (raw)
-SILVER_SCHEMA = "silver"     # Schema pour Silver (Delta nettoyé)
-GOLD_SCHEMA = "gold"         # Schema pour Gold (BI-ready)
+RAW_SCHEMA = "datasets"          # Schema temporaire pour RAW
+BRONZE_SCHEMA = "01_bronze"     # Schema pour Bronze (raw)
+SILVER_SCHEMA = "02_silver"     # Schema pour Silver (Delta nettoyé)
+GOLD_SCHEMA = "03_gold"         # Schema pour Gold (BI-ready)
 
 # ----------------------
 # Volume & fichiers
 # ----------------------
-VOLUME_PATH = "/Volumes/workspace/demo/movies/"  # Volume contenant tous les CSV
+VOLUME_PATH = "/Volumes/workspace/datasets/movies/"  # Volume contenant tous les CSV
 CSV_EXTENSION = ".csv"                             # Extension des fichiers à lire
 
 # ----------------------

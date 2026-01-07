@@ -1,0 +1,24 @@
+{
+  "datasets": [
+    {
+      "name": "998c053f",
+      "displayName": "Untitled dataset",
+      "queryLines": [
+        "select * from workspace.03_gold.tmb_movies_yearly;"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "a61cbefb",
+      "displayName": "Home Page",
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
