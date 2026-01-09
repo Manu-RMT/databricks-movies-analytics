@@ -40,11 +40,12 @@ def drop_columns(df, columns_to_drop : list):
     return df.drop(*columns_to_drop)
 
 
-def create_silver_multivalue(df_bronze, id_col : str, multivalue_col : str, separator=","):
+def create_silver_multivalue(df_bronze, id_col : str, multivalue_col : str,new_col : str, separator=","):
     """
     Création d'un Spark DataFrame Silver à partir d'un Spark DataFrame Bronze.
     - df_bronze: Spark DataFrame Bronze
     - id_col: colonne id
+    - new_col : nouvelle colonne
     - multivalue_col: colonne multivalue
     - separator: séparateur de la colonne multivalue
     """
@@ -54,23 +55,21 @@ def create_silver_multivalue(df_bronze, id_col : str, multivalue_col : str, sepa
     col(id_col),
     split(col(multivalue_col), separator).alias("values_list")
     )
+
     # 2. Exploser la liste pour obtenir une ligne par valeur
     df_exploded = df_split.select(
     col(id_col),
-    explode(col("values_list")).alias("genre")
+    explode(col("values_list")).alias(new_col)
     )
     # 3. Nettoyer la valeur (trim)
     df_clean = df_exploded.withColumn(
-    "genre",
-    trim(col("genre"))
+    new_col,
+    trim(col(new_col))
     )
     # 4. Filtrer les valeurs nulles
     df_filtered = df_clean.filter(
-    col("genre").isNotNull()
+    col(new_col).isNotNull()
     )
 
     return df_filtered
-
-
-
 
