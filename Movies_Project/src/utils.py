@@ -6,19 +6,13 @@ from pyspark.sql import SparkSession
 # -----------------------------
 # Ajouter le repo au Python Path
 # -----------------------------
-sys.path.append("/Workspace/Users/mandu543@gmail.com/Movies_Project")
+sys.path.append("/Workspace/Users/mandu543@gmail.com/databricks-movies-analytics/Movies_Project")
 
 # -----------------------------
 # Importer la config et transformations
 # -----------------------------
-from src.config import (
-    VOLUME_PATH,
-    BRONZE_TABLE,
-    SILVER_TABLE,
-    GOLD_TABLE,
-    CSV_EXTENSION
-)
-from src.transformations import clean_tmdb
+from src.config import *
+from src.transformations import *
 
 # -----------------------------
 # Fonctions utilitaires
@@ -33,13 +27,6 @@ def create_schema_if_not_exists(spark: SparkSession, table_name: str):
     schema_name = table_name.split('.')[1] if '.' in table_name else table_name
     spark.sql(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
 
-# -----------------------------
-# Variables globales utiles
-# -----------------------------
-CONFIG = {
-    "VOLUME_PATH": VOLUME_PATH,
-    "BRONZE_TABLE": BRONZE_TABLE,
-    "SILVER_TABLE": SILVER_TABLE,
-    "GOLD_TABLE": GOLD_TABLE,
-    "CSV_EXTENSION": CSV_EXTENSION
-}
+def save_dataframe(df: SparkSession, table_name: str, mode: str = "overwrite"):
+    """Sauvegarder un dataframe dans un table"""
+    df.write.format("delta").mode(mode).saveAsTable(table_name)

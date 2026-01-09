@@ -16,8 +16,15 @@ VOLUME_PATH = "/Volumes/workspace/datasets/movies/"  # Volume contenant tous les
 CSV_EXTENSION = ".csv"                             # Extension des fichiers à lire
 
 # ----------------------
+# Diffentes couches
+# ----------------------
+BRONZE_ZONE = f"{CATALOG}.{BRONZE_SCHEMA}"
+SILVER_ZONE = f"{CATALOG}.{SILVER_SCHEMA}"
+GOLD_ZONE = f"{CATALOG}.{GOLD_SCHEMA}"
+
+# ----------------------
 # Tables Delta
 # ----------------------
 BRONZE_TABLE = f"{CATALOG}.{BRONZE_SCHEMA}.tmdb_movies"
-SILVER_TABLE = f"{CATALOG}.{SILVER_SCHEMA}.tmdb_movies"
+SILVER_TABLE = f"{CATALOG}.{SILVER_SCHEMA}.fact_movies"
 GOLD_TABLE = f"{CATALOG}.{GOLD_SCHEMA}.tmdb_movies_yearly"
