@@ -59,7 +59,7 @@ def create_dim_table(
            .mode("overwrite")
            .saveAsTable(table_name)
        )
-       return "Insertion OK"
+       return f"Insertion table :   {table_name} OK"
    
    # merge incrémentale
    if overwrite == False : 
@@ -83,7 +83,7 @@ def create_dim_table(
         )
         .execute()
     )
-    return "Merge OK"
+    return f"Merge table : {table_name} OK"
 
 from pyspark.sql.functions import col,split,explode,trim
 
@@ -188,3 +188,46 @@ def create_dataframe_relationnel(
     )
     )
     return res
+
+from typing import List
+from pyspark.sql.utils import AnalysisException
+
+def insert_new_rows(
+    spark: SparkSession,
+    df_new,
+    table_name: str,
+    key_columns: List[str]
+) -> int:
+
+    """
+    Insère uniquement les nouvelles lignes dans une table Spark.
+    Si la table n'existe pas, elle est créée et toutes les lignes sont insérées.
+
+    :param spark: SparkSession
+    :param df_new: DataFrame contenant les nouvelles données
+    :param table_name: nom de la table cible
+    :param key_columns: liste des colonnes de comparaison
+    :return: nombre de lignes insérées
+    """
+    if not key_columns:
+        raise ValueError("La liste key_columns ne peut pas être vide")
+    # Suppression des doublons côté source
+    df_new_dedup = df_new.dropDuplicates(key_columns)
+
+    try:
+        # Vérifie si la table existe
+        df_existing = spark.table(table_name)
+        # Garde uniquement les nouvelles lignes
+        df_to_insert = df_new_dedup.join(
+            df_existing,
+            on=key_columns,
+            how="left_anti" # equivalent not exist
+        )
+
+        df_to_insert.write.mode("append").saveAsTable(table_name)
+        return f"NB ligne merge : {df_to_insert.count()}"
+    except AnalysisException:
+        # La table n'existe pas → création + insertion complète
+        df_new_dedup.write.mode("overwrite").saveAsTable(table_name)
+        return f"NB ligne insérés {df_new_dedup.count()}"
+ 
