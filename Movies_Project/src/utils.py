@@ -104,6 +104,7 @@ def typage_data(df):
     return (
         df
         .filter(col("title").isNotNull())
+        .withColumn("id",col("id").cast("bigint"))
         .withColumn("vote_average", col("vote_average").cast("double"))
         .withColumn("release_date", col("release_date").cast("date"))
         .withColumn("vote_count", col("vote_count").cast("int"))
@@ -114,6 +115,33 @@ def typage_data(df):
         .withColumn("popularity", col("popularity").cast("double"))
 
     )
+
+
+from pyspark.sql.functions import when, lit
+from pyspark.sql.types import (
+   StringType, IntegerType, LongType, DoubleType, FloatType,
+   DecimalType, ShortType, ByteType,
+   DateType, TimestampType
+)
+
+def normalize_nulls(df):
+    """Remplace les valeurs NULL par des valeurs par défaut"""
+    for field in df.schema.fields:
+        c = field.name
+        t = field.dataType
+        # Strings → ''
+        if isinstance(t, StringType):
+            df = df.withColumn(c, when(col(c).isNull(), lit("")).otherwise(col(c)))
+        # Numériques → 0
+        elif isinstance(t, (IntegerType, LongType, DoubleType, FloatType,
+                            DecimalType, ShortType, ByteType)):
+            df = df.withColumn(c, when(col(c).isNull(), lit(0)).otherwise(col(c)))
+        # Dates → valeur par défaut (optionnel)
+        elif isinstance(t, DateType):
+            df = df.withColumn(c, when(col(c).isNull(), lit("1900-01-01")).otherwise(col(c)))
+        elif isinstance(t, TimestampType):
+            df = df.withColumn(c, when(col(c).isNull(), lit("1900-01-01 00:00:00")).otherwise(col(c)))
+    return df
 
 
 def drop_columns(df, columns_to_drop : list):
@@ -189,45 +217,82 @@ def create_dataframe_relationnel(
     )
     return res
 
-from typing import List
+from typing import List, Optional
 from pyspark.sql.utils import AnalysisException
 
 def insert_new_rows(
-    spark: SparkSession,
-    df_new,
-    table_name: str,
-    key_columns: List[str]
-) -> int:
+   spark: SparkSession,
+   df_new,
+   table_name: str,
+   key_columns: Optional[List[str]] = None
+) -> str:
+   """
+   Insère uniquement les nouvelles lignes dans une table Spark/Delta.
+   Si la table n'existe pas, elle est créée et toutes les lignes sont insérées.
+   :param spark: SparkSession
+   :param df_new: DataFrame contenant les nouvelles données
+   :param table_name: nom de la table cible
+   :param key_columns: liste des colonnes de comparaison
+   :return: message avec le nombre de lignes insérées
+   """
+   if key_columns is None:
+       key_columns = df_new.columns
+   # Suppression des doublons côté source
+   df_new_dedup = df_new.dropDuplicates(key_columns)
 
+   try:
+       # Vérifie si la table existe
+       df_existing = spark.table(table_name)
+       # Garde uniquement les nouvelles lignes
+       df_to_insert = df_new_dedup.join(
+           df_existing,
+           on=key_columns,
+           how="left_anti"
+       )
+       # Vérifie si le DataFrame à insérer est vide
+       # `rdd.isEmpty()` est plus performant que df.count() pour les gros DataFrames,
+       # car il arrête le calcul dès qu'une ligne est trouvée
+       # if not df_to_insert.rdd.isEmpty(): => Pas compatible Databricks serverless
+       if df_to_insert.limit(1).count() > 0:
+           df_to_insert.write \
+               .option("mergeSchema", "true") \
+               .mode("append") \
+               .saveAsTable(table_name)
+           nb_inserted = df_to_insert.count()  # comptage après écriture
+           return f"NB lignes merge {nb_inserted}"
+       else:
+           return "Aucune nouvelle ligne à insérer"
+   except AnalysisException:
+       # Table inexistante → création + insertion complète
+       df_new_dedup.write \
+           .option("mergeSchema", "true") \
+           .mode("overwrite") \
+           .saveAsTable(table_name)
+       nb_inserted = df_new_dedup.count()
+       return f"NB lignes insérées {nb_inserted}"
+
+    
+
+def getTable(spark, schema:str ,table_name:str):
     """
-    Insère uniquement les nouvelles lignes dans une table Spark.
-    Si la table n'existe pas, elle est créée et toutes les lignes sont insérées.
-
+    Récupère la table Spark à partir du nom de la table.
     :param spark: SparkSession
-    :param df_new: DataFrame contenant les nouvelles données
-    :param table_name: nom de la table cible
-    :param key_columns: liste des colonnes de comparaison
-    :return: nombre de lignes insérées
+    :param schema: nom du schéma
+    :param table_name: nom de la table
     """
-    if not key_columns:
-        raise ValueError("La liste key_columns ne peut pas être vide")
-    # Suppression des doublons côté source
-    df_new_dedup = df_new.dropDuplicates(key_columns)
-
-    try:
-        # Vérifie si la table existe
-        df_existing = spark.table(table_name)
-        # Garde uniquement les nouvelles lignes
-        df_to_insert = df_new_dedup.join(
-            df_existing,
-            on=key_columns,
-            how="left_anti" # equivalent not exist
-        )
-
-        df_to_insert.write.mode("append").saveAsTable(table_name)
-        return f"NB ligne merge : {df_to_insert.count()}"
-    except AnalysisException:
-        # La table n'existe pas → création + insertion complète
-        df_new_dedup.write.mode("overwrite").saveAsTable(table_name)
-        return f"NB ligne insérés {df_new_dedup.count()}"
+    return spark.table(schema+"."+table_name)
  
+def test():
+    df_new_dedup.createOrReplaceTempView("temp_new")
+    df_existing.createOrReplaceTempView("temp_existing")
+    return (
+        df_new_dedup,
+        df_existing)
+    query = f"""
+    SELECT n.*
+    FROM temp_new n
+    LEFT JOIN temp_existing e
+    ON {" AND ".join([f"n.{c} = e.{c}" for c in key_columns])}
+    """
+    df_to_insert = spark.sql(query)
+    return df_to_insert
