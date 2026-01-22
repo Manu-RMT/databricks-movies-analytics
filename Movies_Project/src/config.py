@@ -27,4 +27,3 @@ GOLD_ZONE = f"{CATALOG}.{GOLD_SCHEMA}"
 # ----------------------
 BRONZE_TABLE = f"{CATALOG}.{BRONZE_SCHEMA}.tmdb_movies"
 SILVER_TABLE = f"{CATALOG}.{SILVER_SCHEMA}.silver_tmdb_movies"
-GOLD_TABLE = f"{CATALOG}.{GOLD_SCHEMA}.tmdb_movies_yearly"

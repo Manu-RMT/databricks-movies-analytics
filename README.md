@@ -1,139 +1,202 @@
-%md
-# Projet TMDB Movies – Notes complètes
+# 🎬 TMDB Movies – Pipeline Databricks (Bronze → Silver → Gold)
 
-## Présentation du dataset TMDb
+## 📌 Présentation
 
-TMDb (The Movie Database) est une base de données de films qui fournit des informations détaillées, notamment :
-- titres
-- notes et évaluations
-- dates de sortie
-- revenus
-- genres
-- casting
-- sociétés de production
+Ce projet met en place un pipeline complet d’ingestion, de transformation et de modélisation de données autour d’un dataset de 1 000 000 de films issus de **TMDb (The Movie Database)**.
 
-Le dataset contient un échantillon de **1 000 000 de films** issus de TMDb.
+Dataset utilisé :  
+https://www.kaggle.com/datasets/asaniczka/tmdb-movies-dataset-2023-930k-movies
+
+L’objectif est de construire un **modèle en étoile** exploitable par les métiers et optimisé pour la BI, en s’appuyant sur **Databricks**, **Delta Lake** et les bonnes pratiques Data Engineering.
 
 ---
 
+## 🎯 Objectifs du projet
 
-## 1️⃣ Objectif du projet
-L’objectif final du projet est de :
+### 🔧 Objectifs techniques
 
-1. **Mettre en place un pipeline robuste** (Bronze → Silver → Gold) sur Databricks avec Delta Lake, capable de gérer :
-   - un volume important de données,
-   - des structures de texte complexes,
-   - des mises à jour incrémentales,
-   - l’historisation via Time Travel.
+- Construire un pipeline robuste **Bronze → Silver → Gold**
 
-2. **Fournir un modèle de données en étoile** :
-   - exploitable directement par les métiers,
-   - compatible avec les outils de BI (Power BI, Tableau, etc.),
-   - stable et extensible pour de futurs besoins.
-   - performant pour l'analyse
+- Gérer un volume important de données
 
-3. **Construire un dashboard d’analyse** basé sur les tables Gold, permettant :
-   - d’analyser la performance des films (budget, revenus, rentabilité),
-   - de suivre les tendances par genre, période, studio,
-   - d’identifier les films les mieux notés ou les plus populaires,
-   - de répondre rapidement aux questions métiers sur le catalogue de films TMDb.
+- Manipuler des structures complexes (listes, JSON, nested fields)
 
+- Implémenter des **mises à jour incrémentales** (Delta MERGE)
 
----
+- Assurer l’**historisation** via Delta Lake Time Travel
 
-## 2️⃣ Structure du pipeline
+- Garantir une architecture stable, maintenable et extensible
 
-| Couche   | Contenu                                                | Objectif                                         |
-|----------|--------------------------------------------------------|-------------------------------------------------|
-| **Bronze** | Données brutes de tous les CSV, toutes les colonnes   | Historisation complète, jamais modifiées       |
-| **Silver** | Données nettoyées, typées, filtrées, merge incrémental | Source de vérité pour analyses et Gold         |
-| **Gold**   | Modèle en étoile              | Dashboards et rapports BI optimisés            |
+### 📊 Objectifs analytiques
 
----
+- Produire un **modèle en étoile** clair et performant
 
-## 3️⃣ Étapes réalisées
+- Rendre les données directement exploitables par les outils BI
 
-### 3.1 Ingestion Bronze
-- Lecture automatique de tous les CSV dans le volume `/Volumes/workspace/demo/movies/`.
-- Options Spark pour gérer correctement les titres contenant des **virgules ou retours à la ligne** :
-  - `header=True`
-  - `multiLine=True`
-  - `escape='"'`
-  - `quote='"'`
-  - `ignoreLeadingWhiteSpace=True`
-- Fusion de tous les CSV avec `unionByName`.
-- Écriture en Delta table Bronze :
-  - `df_bronze.write.format("delta").mode("overwrite").saveAsTable(BRONZE_TABLE)`
-- **Time Travel** possible pour revenir à n’importe quelle version précédente.
+- Optimiser les tables pour les analyses métiers
+
+### 📈 Objectifs décisionnels
+
+Créer un dashboard permettant :
+
+- d’analyser budget, revenus, rentabilité, popularité
+
+- de suivre les tendances par genre, période, studio
+
+- d’identifier les films les mieux notés
+
+- de répondre rapidement aux questions métiers
 
 ---
 
-### 3.2 Transformation Silver
-- Fonction `clean_tmdb(df)` :
-  - Filtre `title IS NOT NULL`
-  - Typage :
-    - `vote_average` → double
-    - `release_date` → date
-- Gestion des **ID uniques** :
-  - Si `id` absent, création automatique : `mon_id = concat(title, release_date)`
-- Merge incrémental Delta pour ajouter uniquement les nouvelles lignes.
-- Comptage du nombre de lignes insérées avant/après le merge pour vérifier les nouvelles données.
+## 🗂️ Structure du projet
 
----
+<br>
 
-### 3.3 Création Gold
-- Gold peut contenir :
-  - Gestion des erreurs avec **try/except**
-- Optimisation Delta pour BI :
-  - `OPTIMIZE + ZORDER` pour accélérer les filtres et agrégations
-- Solutions pour éviter les erreurs de schéma :
-  - Supprimer la table Gold avant création (`DROP TABLE IF EXISTS`)
-  - Ou `overwriteSchema=True` pour forcer la compatibilité
-- Création des tables de fait et de dimensions : 
-  - `Faits_Films` : Contient les mesures clés par film, par date de sortie, par genre, etc.
-  - `Dim_Film` : informations descriptives du film (titre, langue, synopsis, statut).
-  - `Dim_Date` : calendrier analytique (jour, mois, année, trimestre, jour de semaine).
-  - `Dim_Genre` : genres de films (Action, Comédie, Drame, etc.).
-  - `Dim_Production` : studios et pays de production.
-  - `Dim_Casting` : acteurs principaux, réalisateurs, scénaristes.
-  - `Dim_Collection` : sagas / franchises (ex. : Star Wars, Harry Potter).
+<img src="./image_1769089011762.png" alt="image" width="500" padding="5em">
+
+
+
+<br> 
 
 
 ---
 
+## 🏗️ Architecture du pipeline
 
+### 🥉 Bronze – Données brutes
 
+**Base :** `01_bronze`  
 
-### 3.5 Bonnes pratiques et recommandations
-- **Bronze = raw**, jamais modifié.
-- **Silver = nettoyé, typé, source de vérité**, idéal pour créer des **dimensions et tables fact**
-- **Gold = BI-ready**, tables détaillées ou agrégées, optimisées pour dashboards.
-- Créer des **dimensions** : `dim_movie`, `dim_genre`, `dim_language`.
-- Créer des **tables fact** : `fact_movie_rating` pour votes et notes.
-- Utiliser **merge incrémental** pour ajouter seulement les nouvelles données.
-- Utiliser **Time Travel** pour revenir à une version précédente si nécessaire.
-- Optimiser Gold avec `OPTIMIZE + ZORDER` pour des filtres rapides.
+**Table :** `tmdb_movies`
 
----
+- Données brutes issues des CSV  
 
-### 3.6 Gestion des CSV problématiques
-- Titres avec **virgules, guillemets ou retours à la ligne** ne cassent plus le pipeline grâce aux options Spark.
-- Colonnes correctement remises dans l’ordre après lecture.
-- Silver et Gold ne perdent aucune donnée essentielle.
+- Aucune transformation  
+
+- Historisation complète  
+
+- Données jamais modifiées  
 
 ---
 
-### 3.7 Avantages de ce pipeline
-- **Fiable et robuste** : merge incrémental, gestion des IDs uniques, Time Travel
-- **Extensible** : possibilité de créer d’autres dimensions ou KPIs
-- **BI-ready** : tables Gold optimisées pour dashboards
-- **Pro** : conforme aux bonnes pratiques Data Lake / Data Warehouse sur Databricks
+### 🥈 Silver – Données nettoyées et normalisées
+
+**Base :** `02_silver`  
+
+**Tables :**
+
+#### Dimensions intermédiaires
+
+- `dim_film_genre`
+
+- `dim_film_production_companie`
+
+- `dim_film_production_country`
+
+- `dim_film_spoken_language`
+
+#### Tables Silver finales
+
+- `silver_tmdb_movies`
+
+- `silver_tmdb_movies_genre`
+
+- `silver_tmdb_movies_production_companie`
+
+- `silver_tmdb_movies_production_country`
+
+- `silver_tmdb_movies_spoken_language`
+
+**Objectifs :**
+
+- Nettoyage, typage, normalisation  
+
+- Gestion des structures complexes  
+
+- MERGE incrémental  
+
+- Préparation pour le modèle Gold  
 
 ---
 
-## 4️⃣ Recommandation globale
-- **Bronze** → données brutes
-- **Silver** → données nettoyées et typées, dimensions et faits
-- **Gold** → tables BI-ready, détaillées ou agrégées
-- **Time Travel Delta** → revenir à une version précédente
-- **Merge incrémental** → ajouter uniquement les nouvelles lignes
+### 🥇 Gold – Modèle en étoile orienté BI
+
+**Base :** `03_gold`  
+
+**Tables :**
+
+#### Dimensions
+
+- `dim_movies_compagnie_prod`
+
+- `dim_movies_genre`
+
+- `dim_movies_langage_traduit`
+
+- `dim_movies_pays_prod`
+
+#### Faits & relations
+
+- `fact_movies`
+
+- `rel_movies_compagnie_prod`
+
+- `rel_movies_genre`
+
+- `rel_movies_language_traduit`
+
+- `rel_movies_pays_prod`
+
+**Objectifs :**
+
+- Tables orientées métier  
+
+- Modèle en étoile performant  
+
+- Optimisation pour Power BI / Tableau  
+
+- Support des dashboards analytiques  
+
+---
+
+## 🧱 Synthèse du pipeline
+
+| Couche | Contenu | Objectif |
+|--------|---------|-----------|
+| **Bronze** | Données brutes | Historisation complète |
+| **Silver** | Données nettoyées, typées, normalisées | Source fiable et prête pour la modélisation |
+| **Gold** | Modèle en étoile | Analyses BI & dashboards |
+
+<br>
+
+---
+
+## 🚀 Technologies utilisées
+
+- **Databricks** (notebooks, jobs, orchestration)
+
+- **Delta Lake** (ACID, Time Travel, MERGE)
+
+- **PySpark**
+
+- **SQL**
+
+- **Power BI / Tableau**
+
+
+---
+
+<!-- 
+## 📌 Améliorations possibles
+
+- Ajout d’un orchestrateur (Airflow, Databricks Workflows)
+
+- Mise en place de tests automatisés (Great Expectations)
+
+- Ajout d’un monitoring (Unity Catalog, Databricks Metrics)
+
+- Intégration CI/CD (Repos + GitHub Actions)
+
+*/
+>
