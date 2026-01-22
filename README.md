@@ -27,6 +27,8 @@ L’objectif est de construire un **modèle en étoile** exploitable par les mé
 
 - Garantir une architecture stable, maintenable et extensible
 
+- Orchestrer les 3 notebooks 
+
 ### 📊 Objectifs analytiques
 
 - Produire un **modèle en étoile** clair et performant
