@@ -2,22 +2,866 @@
   "datasets": [
     {
       "name": "998c053f",
-      "displayName": "Untitled dataset",
+      "displayName": "total_movies",
       "queryLines": [
-        "select * from workspace.03_gold.tmb_movies_yearly;"
-      ]
+        "select \r\n",
+        "count(*) as total_movies \r\n",
+        "from workspace.03_gold.fact_movies;"
+      ],
+      "catalog": "workspace",
+      "schema": "03_gold"
+    },
+    {
+      "name": "83d3e8ae",
+      "displayName": "total_movies par year",
+      "queryLines": [
+        "select \r\n",
+        "count(*) as total_movies, \r\n",
+        "YEAR(release_date) as release_year\r\n",
+        "from workspace.03_gold.fact_movies\r\n",
+        "group by YEAR(release_date)\r\n",
+        "order by 2 desc\r\n",
+        ";"
+      ],
+      "catalog": "workspace",
+      "schema": "03_gold"
+    },
+    {
+      "name": "8070dccf",
+      "displayName": "P1_budget_revenu_roi_global",
+      "queryLines": [
+        "SELECT \r\n",
+        "sum(budget) as total_budget,\r\n",
+        "sum(revenue) as total_revenue,\r\n",
+        "-- ROI global (ensemble budget)\r\n",
+        "(sum(revenue) - sum(budget)) / sum(budget) AS roi_global\r\n",
+        "FROM fact_movies\r\n",
+        "WHERE budget > 0 ;"
+      ],
+      "catalog": "workspace",
+      "schema": "03_gold"
+    },
+    {
+      "name": "2f384897",
+      "displayName": "%_film_rentables",
+      "queryLines": [
+        "SELECT\r\n",
+        "    (SUM(CASE WHEN revenue > budget THEN 1 ELSE 0 END) / count(*)) * 100 as pct_film_rentable\r\n",
+        "FROM fact_movies;"
+      ],
+      "catalog": "workspace",
+      "schema": "03_gold"
+    },
+    {
+      "name": "ef53e398",
+      "displayName": "KPI_GLOBAL",
+      "queryLines": [
+        "-- =====================================================\r\n",
+        "-- Vue KPI globale des films\r\n",
+        "-- Contient les métriques globales de performance\r\n",
+        "-- =====================================================\r\n",
+        "SELECT\r\n",
+        "-- Nombre total de films\r\n",
+        "   COUNT(*) AS total_films,\r\n",
+        "-- Budget total investi\r\n",
+        "   SUM(budget) AS total_budget,\r\n",
+        "-- Revenus totaux générés\r\n",
+        "   SUM(revenue) AS total_revenue,\r\n",
+        "-- Profit global\r\n",
+        "   SUM(revenue - budget) AS total_profit,\r\n",
+        "-- ROI moyen des films\r\n",
+        "   AVG((revenue - budget)/NULLIF(budget,0)) AS roi_moyen,\r\n",
+        "-- Popularité moyenne catalogue\r\n",
+        "   AVG(popularity) AS popularite_moyenne,\r\n",
+        "-- Note moyenne utilisateurs\r\n",
+        "   AVG(vote_average) AS note_moyenne,\r\n",
+        "-- Nombre moyen de votes\r\n",
+        "   AVG(vote_count) AS votes_moyens,\r\n",
+        "-- Revenu médian (plus robuste que moyenne)\r\n",
+        "   percentile_approx(revenue, 0.5) AS revenu_median,\r\n",
+        "-- Pourcentage de films rentables\r\n",
+        "   SUM(CASE WHEN revenue > budget THEN 1 ELSE 0 END) / COUNT(*)\r\n",
+        "       AS pct_films_rentables    \r\n",
+        "FROM fact_movies f\r\n",
+        "\r\n",
+        ";\r\n",
+        "\r\n",
+        "/*\r\n",
+        ",\r\n",
+        "d.year,\r\n",
+        "d.month_name\r\n",
+        "\r\n",
+        "LEFT join dim_date d\r\n",
+        "on f.release_date = d.date\r\n",
+        "GROUP BY d.year,\r\n",
+        "   d.month_name\r\n",
+        "*/"
+      ],
+      "catalog": "workspace",
+      "schema": "03_gold"
+    },
+    {
+      "name": "afe44289",
+      "displayName": "kpi _per_year",
+      "queryLines": [
+        "-- =====================================================\r\n",
+        "-- Vue KPI globale des films\r\n",
+        "-- Contient les métriques globales de performance\r\n",
+        "-- =====================================================\r\n",
+        "SELECT\r\n",
+        "-- Nombre total de films\r\n",
+        "   COUNT(*) AS total_films,\r\n",
+        "-- Budget total investi\r\n",
+        "   SUM(budget) AS total_budget,\r\n",
+        "-- Revenus totaux générés\r\n",
+        "   SUM(revenue) AS total_revenue,\r\n",
+        "-- Profit global\r\n",
+        "   SUM(revenue - budget) AS total_profit,\r\n",
+        "-- ROI moyen des films\r\n",
+        "   AVG((revenue - budget)/NULLIF(budget,0)) AS roi_moyen,\r\n",
+        "-- Popularité moyenne catalogue\r\n",
+        "   AVG(popularity) AS popularite_moyenne,\r\n",
+        "-- Note moyenne utilisateurs\r\n",
+        "   AVG(vote_average) AS note_moyenne,\r\n",
+        "-- Nombre moyen de votes\r\n",
+        "   AVG(vote_count) AS votes_moyens,\r\n",
+        "-- Revenu médian (plus robuste que moyenne)\r\n",
+        "   percentile_approx(revenue, 0.5) AS revenu_median,\r\n",
+        "-- Pourcentage de films rentables\r\n",
+        "   SUM(CASE WHEN revenue > budget THEN 1 ELSE 0 END) / COUNT(*)\r\n",
+        "       AS pct_films_rentables,\r\n",
+        "d.year\r\n",
+        "FROM fact_movies f\r\n",
+        "LEFT join dim_date d\r\n",
+        "on f.release_date = d.date\r\n",
+        "GROUP BY d.year\r\n",
+        ";"
+      ],
+      "catalog": "workspace",
+      "schema": "03_gold"
+    },
+    {
+      "name": "c6692875",
+      "displayName": "KPI_PAR_GENRE",
+      "queryLines": [
+        "-- =====================================================\r\n",
+        "-- Performance financière et audience par genre\r\n",
+        "-- =====================================================\r\n",
+        "SELECT\r\n",
+        "-- Nom du genre\r\n",
+        "   g.genre,\r\n",
+        "-- Nombre de films par genre\r\n",
+        "   COUNT(*) nb_films,\r\n",
+        "-- Revenus totaux générés\r\n",
+        "   SUM(f.revenue) revenue_total,\r\n",
+        "-- Budget moyen investi\r\n",
+        "   AVG(f.budget) budget_moyen,\r\n",
+        "-- ROI moyen\r\n",
+        "   AVG((f.revenue - f.budget)/NULLIF(f.budget,0)) roi_moyen,\r\n",
+        "-- Popularité moyenne\r\n",
+        "   AVG(f.popularity) popularite_moyenne,\r\n",
+        "-- Note moyenne public\r\n",
+        "   AVG(f.vote_average) note_moyenne,\r\n",
+        "-- Volatilité des revenus (mesure du risque)\r\n",
+        "   STDDEV(f.revenue) volatilite_revenue\r\n",
+        "FROM fact_movies f\r\n",
+        "-- Jointure table relation film-genre\r\n",
+        "JOIN rel_movies_genre rg\r\n",
+        "   ON f.id = rg.id_film\r\n",
+        "-- Dimension genre\r\n",
+        "JOIN dim_movies_genre g\r\n",
+        "   ON rg.id_genre = g.id\r\n",
+        "GROUP BY g.genre;"
+      ],
+      "catalog": "workspace",
+      "schema": "03_gold"
     }
   ],
   "pages": [
     {
       "name": "a61cbefb",
       "displayName": "Home Page",
+      "layout": [
+        {
+          "widget": {
+            "name": "total-movies",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ef53e398",
+                  "fields": [
+                    {
+                      "name": "total_films",
+                      "expression": "`total_films`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_films",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "Total Movies",
+                "showTitle": false,
+                "showDescription": true,
+                "description": "Total Films",
+                "headerAlignment": "center"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "total-budget",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ef53e398",
+                  "fields": [
+                    {
+                      "name": "roi_moyen",
+                      "expression": "`roi_moyen`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "roi_moyen",
+                  "style": {
+                    "rules": [
+                      {
+                        "condition": {
+                          "operator": ">="
+                        },
+                        "color": "#00A972"
+                      }
+                    ]
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "title": "ROI Global",
+                "showTitle": true,
+                "headerAlignment": "center",
+                "showDescription": true,
+                "description": "Retour sur investissement"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 1,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "total-revenues",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ef53e398",
+                  "fields": [
+                    {
+                      "name": "total_revenue",
+                      "expression": "`total_revenue`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_revenue"
+                }
+              },
+              "frame": {
+                "title": "Total Revenues",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 1,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "total-budget-overview-1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ef53e398",
+                  "fields": [
+                    {
+                      "name": "total_budget",
+                      "expression": "`total_budget`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_budget"
+                }
+              },
+              "frame": {
+                "title": "Total Budget",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 0,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "b8b80957",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ef53e398",
+                  "fields": [
+                    {
+                      "name": "total_profit",
+                      "expression": "`total_profit`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_profit"
+                }
+              },
+              "frame": {
+                "showTitle": false,
+                "showDescription": true,
+                "description": "Total Profit"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "total-revenue-1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ef53e398",
+                  "fields": [
+                    {
+                      "name": "note_moyenne",
+                      "expression": "`note_moyenne`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "note_moyenne"
+                }
+              },
+              "frame": {
+                "title": "Note moyenne film",
+                "showTitle": true,
+                "headerAlignment": "center"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "popularite-moyenne",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ef53e398",
+                  "fields": [
+                    {
+                      "name": "popularite_moyenne",
+                      "expression": "`popularite_moyenne`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "popularite_moyenne"
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "Popularité moyenne",
+                "headerAlignment": "center"
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "films-rentables",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ef53e398",
+                  "fields": [
+                    {
+                      "name": "pct_films_rentables",
+                      "expression": "`pct_films_rentables`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "pct_films_rentables",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false,
+                "showTitle": true,
+                "title": "% Films rentables"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "98283556",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "afe44289",
+                  "fields": [
+                    {
+                      "name": "year",
+                      "expression": "`year`"
+                    },
+                    {
+                      "name": "pct_films_rentables",
+                      "expression": "`pct_films_rentables`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "year",
+                  "axis": {
+                    "title": "Annee"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "pct_films_rentables",
+                  "axis": {
+                    "title": "% Profit"
+                  },
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 2,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "1d35fff5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "afe44289",
+                  "fields": [
+                    {
+                      "name": "year",
+                      "expression": "`year`"
+                    },
+                    {
+                      "name": "total_revenue",
+                      "expression": "`total_revenue`"
+                    },
+                    {
+                      "name": "total_budget",
+                      "expression": "`total_budget`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "year",
+                  "axis": {
+                    "title": "Annee"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "primary": {
+                    "fields": [
+                      {
+                        "fieldName": "total_revenue"
+                      },
+                      {
+                        "fieldName": "total_budget"
+                      }
+                    ],
+                    "scale": {
+                      "type": "quantitative"
+                    },
+                    "axis": {
+                      "hideTitle": true,
+                      "hideGrid": false,
+                      "hideLabels": false
+                    }
+                  },
+                  "secondary": {
+                    "fields": [],
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showDescription": false
+              },
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 1
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ],
+                "size": 1.1
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 4,
+            "width": 4,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "annee",
+            "queries": [
+              {
+                "name": "dashboards/01f0eb0efca712f1bedab56f3ecf7e09/datasets/01f0fd1dce4f11479c8382229434af07_year",
+                "query": {
+                  "datasetName": "afe44289",
+                  "fields": [
+                    {
+                      "name": "year",
+                      "expression": "`year`"
+                    },
+                    {
+                      "name": "year_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "year",
+                    "queryName": "dashboards/01f0eb0efca712f1bedab56f3ecf7e09/datasets/01f0fd1dce4f11479c8382229434af07_year"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "  Année"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "564e7c17",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"text-align:center;display:block;\"><span style=\"font-size: 18px;\">**KPI PAR GENRE**</span></span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "63ea94f7",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "c6692875",
+                  "fields": [
+                    {
+                      "name": "genre",
+                      "expression": "`genre`"
+                    },
+                    {
+                      "name": "sum(nb_films)",
+                      "expression": "SUM(`nb_films`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "histogram",
+              "encodings": {
+                "x": {
+                  "fieldName": "genre",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(nb_films)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 3,
+            "height": 6
+          }
+        }
+      ],
       "pageType": "PAGE_TYPE_CANVAS"
     }
   ],
   "uiSettings": {
     "theme": {
-      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+      "canvasBackgroundColor": {
+        "light": "#FAFAFB",
+        "dark": "#1F272D"
+      },
+      "widgetBackgroundColor": {
+        "light": "#FFFFFF",
+        "dark": "#11171C"
+      },
+      "fontColor": {
+        "light": "#11171C",
+        "dark": "#E8ECF0"
+      },
+      "selectionColor": {
+        "light": "#2272B4",
+        "dark": "#8ACAFF"
+      },
+      "widgetHeaderAlignment": "CENTER"
+    },
+    "genieSpace": {
+      "isEnabled": false,
+      "enablementMode": "DISABLED"
     },
     "applyModeEnabled": false
   }
